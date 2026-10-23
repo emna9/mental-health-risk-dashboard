@@ -1,0 +1,2 @@
+Model,learning_rate,max_depth,max_iter,min_samples_leaf,n_estimators,max_features,Selection_Objective,Selection_Score,Accuracy,Balanced_Accuracy,Precision_0,Recall_0,F1_0,PR_AUC_0,Precision_1,Recall_1,F1_1,PR_AUC_1,ROC_AUC_1
+HistGradientBoosting,0.1,7,200,20,,,Best_CV_F1,0.9508,0.905,0.5406,0.2537,0.1083,0.1518,0.1415,0.9276,0.9729,0.9497,0.9448,0.6271

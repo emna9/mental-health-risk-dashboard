@@ -1,0 +1,2 @@
+Model,learning_rate,max_depth,max_iter,min_samples_leaf,n_estimators,max_features,Selection_Objective,Selection_Score,Accuracy,Balanced_Accuracy,Precision_0,Recall_0,F1_0,PR_AUC_0,Precision_1,Recall_1,F1_1,PR_AUC_1,ROC_AUC_1
+Balanced RF (tuned),,10,,10,700,sqrt,Best_CV_PR_AUC_0,0.1586,0.797,0.6043,0.1608,0.3758,0.2252,0.1597,0.94,0.8329,0.8832,0.9448,0.6378
