@@ -115,15 +115,18 @@ The same `Dockerfile` works on Railway, Fly.io, Koyeb, or a VPS. Set `APP_MODE` 
 
 ### Keeping the free API warm
 
-`.github/workflows/keep-warm.yml` pings the API every 5 minutes so Render does not spin it down and the dashboard avoids 502 errors during cold starts. It runs on GitHub's scheduler, so no extra account is needed.
+Free Render services spin down after 15 minutes without traffic, and a sleeping API responds with `502` while it boots. Two mechanisms keep the API awake:
 
-Free Render workspaces receive **750 instance hours per month, shared by all free services**. Keeping the API awake around the clock consumes roughly 720-744 of them, and the dashboard's own wake time counts too. If the total runs out, Render suspends every free service until the next month. To leave headroom, narrow the cron to your active hours, for example:
+- **Self-ping (primary):** with `KEEP_WARM=1` on the API service, the API pings its own public URL every `KEEP_WARM_INTERVAL` seconds (default 600). Render injects `RENDER_EXTERNAL_URL` automatically. The dashboard never has to wait for the API.
+- **GitHub backup:** `.github/workflows/keep-warm.yml` pings the API every 5 minutes from GitHub Actions, which also wakes it if it ever does spin down.
+
+Free Render workspaces receive **750 instance hours per month, shared by all free services**. Keeping the API awake around the clock consumes roughly 720-744 of them, and the dashboard's own wake time counts too. If the total runs out, Render suspends every free service until the next month. To leave headroom, disable `KEEP_WARM` and/or narrow the workflow cron to your active hours, for example:
 
 ```yaml
 - cron: "*/5 6-22 * * *"   # 06:00-22:59 UTC only
 ```
 
-GitHub disables scheduled workflows after 60 days without repository activity; re-enable the workflow from the Actions tab if needed.
+GitHub disables scheduled workflows after 60 days without repository activity; re-enable the workflow from the Actions tab if needed. The dashboard itself still spins down when idle, so its first load after a quiet period shows Render's loading page for up to a minute.
 
 ### Temporary public URL from a local machine
 
@@ -145,6 +148,8 @@ Quick-tunnel URLs are ephemeral: they change on every restart and stop working w
 | `BACKEND_HOST` / `BACKEND_PORT` | `127.0.0.1` / `8000` | Backend bind address in `full` mode |
 | `BACKEND_TIMEOUT` | `90` | Seconds to wait for the API, including cold starts |
 | `BACKEND_ATTEMPTS` | `8` | Retries while the API wakes up (502/503/504 and timeouts) |
+| `KEEP_WARM` | `0` | `1` makes the API ping itself so free hosting does not spin it down |
+| `KEEP_WARM_INTERVAL` | `600` | Seconds between self-pings (minimum 300; keep under 900) |
 | `PORT` | `8501` | Public port (set automatically by most platforms) |
 | `ALLOWED_ORIGINS` | `http://localhost:8501,http://127.0.0.1:8501` | Comma-separated CORS origins for the API |
 
