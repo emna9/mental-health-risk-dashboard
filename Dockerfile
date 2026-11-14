@@ -10,7 +10,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     BACKEND_URL=http://127.0.0.1:8000 \
     PORT=8501 \
     STREAMLIT_SERVER_HEADLESS=true \
-    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
+    STREAMLIT_SERVER_FILE_WATCHER_TYPE=none \
+    MALLOC_ARENA_MAX=2 \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
 
 # libgomp1 is required by scikit-learn / XGBoost wheels; curl powers the health check.
 RUN apt-get update \
@@ -38,6 +44,6 @@ USER appuser
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${PORT}/_stcore/health" || exit 1
+    CMD sh -c 'curl -fsS "http://127.0.0.1:${PORT}/_stcore/health" || curl -fsS "http://127.0.0.1:${PORT}/api/v1/health" || exit 1'
 
 CMD ["/usr/local/bin/entrypoint.sh"]

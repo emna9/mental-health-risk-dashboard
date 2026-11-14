@@ -93,21 +93,24 @@ Then open **http://localhost:8501**. The container health check hits `/_stcore/h
 
 ### Render (one-click blueprint)
 
-[`render.yaml`](render.yaml) deploys the image as a free web service with the health check already configured:
+[`render.yaml`](render.yaml) deploys **two free web services** from the same image, because a single 512 MB free instance cannot hold Streamlit and the prediction model at once:
+
+- `dashboard-api` (`APP_MODE=api`): FastAPI only, health check at `/api/v1/health`.
+- `dashboard` (`APP_MODE=ui`): Streamlit only, health check at `/_stcore/health`, with `BACKEND_URL` wired to the API service via `fromService`.
 
 1. Push this repository to GitHub.
 2. In Render, choose **New > Blueprint** and select the repository. Render reads `render.yaml`.
-3. Wait for the first build (several minutes: scikit-learn and XGBoost wheels) and open the service URL.
+3. Wait for both builds and open the `dashboard` service URL.
 
-The free instance has 512 MB of RAM. Loading the 39 MB model artifact alongside pandas and scikit-learn may exceed that limit under load; upgrade the instance type if the service restarts.
+Each free service stays under its 512 MB limit: the API idles near 150 MB and peaks around 310 MB when a prediction loads the model; the dashboard needs roughly 300 MB. Free services sleep after ~15 minutes, so the first request after idle can take a minute while both wake. Increase `BACKEND_TIMEOUT` if that is not enough.
 
 ### Other container hosts
 
-The same `Dockerfile` works on Railway, Fly.io, Koyeb, or a VPS. Requirements:
+The same `Dockerfile` works on Railway, Fly.io, Koyeb, or a VPS. Set `APP_MODE` to `full` (default), `api`, or `ui`. Requirements:
 
 - Expose the container port (`PORT`, default `8501`).
-- Keep `BACKEND_URL` pointed at the backend (`http://127.0.0.1:8000`).
-- Point the platform health check at `/_stcore/health`.
+- For `ui`, set `BACKEND_URL` to the API service address.
+- Point the platform health check at `/_stcore/health` (UI) or `/api/v1/health` (API).
 
 ### Temporary public URL from a local machine
 
@@ -124,9 +127,11 @@ Quick-tunnel URLs are ephemeral: they change on every restart and stop working w
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `BACKEND_URL` | `http://localhost:8000` | Backend address used by the dashboard |
-| `BACKEND_HOST` / `BACKEND_PORT` | `127.0.0.1` / `8000` | Backend bind address inside the container |
-| `PORT` | `8501` | Dashboard port (set automatically by most platforms) |
+| `APP_MODE` | `full` | `full` (API + dashboard), `api` (API only), `ui` (dashboard only) |
+| `BACKEND_URL` | `http://localhost:8000` | Backend address used by the dashboard (URL or bare hostname) |
+| `BACKEND_HOST` / `BACKEND_PORT` | `127.0.0.1` / `8000` | Backend bind address in `full` mode |
+| `BACKEND_TIMEOUT` | `90` | Seconds to wait for the API, including cold starts |
+| `PORT` | `8501` | Public port (set automatically by most platforms) |
 | `ALLOWED_ORIGINS` | `http://localhost:8501,http://127.0.0.1:8501` | Comma-separated CORS origins for the API |
 
 ## Modeling

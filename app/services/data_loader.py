@@ -7,11 +7,6 @@ import pandas as pd
 
 from app.config.settings import get_paths
 
-try:
-    import streamlit as st
-except ModuleNotFoundError:  # pragma: no cover - exercised outside Streamlit runtime
-    st = None
-
 
 @dataclass(frozen=True)
 class LoadedDatasets:
@@ -32,17 +27,11 @@ def _load_datasets_impl() -> LoadedDatasets:
     )
 
 
-if st:
-
-    @st.cache_data(show_spinner=False)
-    def load_datasets() -> LoadedDatasets:
-        return _load_datasets_impl()
-
-else:
-
-    @lru_cache(maxsize=1)
-    def load_datasets() -> LoadedDatasets:
-        return _load_datasets_impl()
+@lru_cache(maxsize=1)
+def load_datasets() -> LoadedDatasets:
+    # The bundled CSVs are immutable at runtime, so one cached copy serves both
+    # the dashboard and the API without importing Streamlit into the API process.
+    return _load_datasets_impl()
 
 
 def get_ranked_models() -> pd.DataFrame:

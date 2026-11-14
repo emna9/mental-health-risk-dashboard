@@ -6,9 +6,13 @@ import pandas as pd
 import requests
 import streamlit as st
 
-_BASE_URL = os.environ.get("BACKEND_URL", "http://localhost:8000").rstrip("/")
+_raw_base_url = os.environ.get("BACKEND_URL", "http://localhost:8000").strip().rstrip("/")
+if not _raw_base_url.startswith(("http://", "https://")):
+    # Render's fromService.host provides a bare hostname.
+    _raw_base_url = f"https://{_raw_base_url}"
+_BASE_URL = _raw_base_url
 _API = f"{_BASE_URL}/api/v1"
-_TIMEOUT = 10
+_TIMEOUT = int(os.environ.get("BACKEND_TIMEOUT", "90"))
 
 
 class BackendUnavailableError(Exception):

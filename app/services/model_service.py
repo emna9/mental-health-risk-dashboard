@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-import joblib
 import pandas as pd
-from imblearn.ensemble import BalancedRandomForestClassifier
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 
 from app.config.settings import get_paths
 from app.utils.constants import (
@@ -29,7 +26,11 @@ class PredictionResult:
     disclaimer: str
 
 
-def build_preprocessor(feature_frame: pd.DataFrame) -> ColumnTransformer:
+def build_preprocessor(feature_frame: pd.DataFrame) -> Any:
+    # Imported lazily so the dashboard process never loads scikit-learn.
+    from sklearn.compose import ColumnTransformer
+    from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
+
     numeric_cols = [
         column for column in feature_frame.columns if column not in ORDINAL_COLS and column not in NOMINAL_COLS
     ]
@@ -57,6 +58,9 @@ def build_preprocessor(feature_frame: pd.DataFrame) -> ColumnTransformer:
 
 
 def train_and_persist_best_model(force: bool = False) -> Path:
+    import joblib
+    from imblearn.ensemble import BalancedRandomForestClassifier
+
     paths = get_paths()
     if paths.artifact_path.exists() and not force:
         return paths.artifact_path
@@ -90,6 +94,8 @@ def train_and_persist_best_model(force: bool = False) -> Path:
 
 
 def load_best_model_artifact() -> dict | None:
+    import joblib
+
     artifact_path = get_paths().artifact_path
     if not artifact_path.exists():
         return None

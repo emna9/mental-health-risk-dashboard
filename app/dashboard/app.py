@@ -3,10 +3,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from app.config.settings import get_paths
 from app.services.analytics import compute_data_explorer
 from app.services.data_loader import load_datasets
 from app.services.filters import apply_filters, build_filter_state
-from app.services.model_service import load_best_model_artifact
 from app.utils.constants import (
     APP_SUBTITLE,
     APP_TITLE,
@@ -15,6 +15,7 @@ from app.utils.constants import (
     NOMINAL_COLS,
     ORDINAL_COLS,
     PERSONAL_INPUT_GROUPS,
+    PROXY_DROP_COLS,
     TARGET_COL,
 )
 from app.utils.formatting import format_pct, format_score, humanize_label
@@ -511,15 +512,17 @@ def _render_prediction_sandbox(analytics_df: pd.DataFrame) -> None:
         "Prediction Sandbox",
         "Try a single survey profile with the deployed Balanced RF model. This output is a dataset-specific pattern estimate, not a diagnosis.",
     )
-    artifact = load_best_model_artifact()
-    if artifact is None:
+    if not get_paths().artifact_path.exists():
         render_finding(
             "The persisted model artifact is missing, so live predictions are currently unavailable. Train and save the Balanced RF artifact locally to enable this section.",
             warning=True,
         )
         return
 
-    input_columns = artifact["input_columns"]
+    # Derived from the analytics frame instead of unpickling the model in this process.
+    input_columns = [
+        column for column in analytics_df.columns if column not in PROXY_DROP_COLS and column != TARGET_COL
+    ]
     field_values = {}
     with st.form("prediction_form"):
         for section_name, columns in PERSONAL_INPUT_GROUPS.items():
