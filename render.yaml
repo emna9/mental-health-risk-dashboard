@@ -7,7 +7,7 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /_stcore/health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: BACKEND_HOST
         value: 127.0.0.1
