@@ -1,0 +1,17 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# New > Blueprint > pick this repo, or open the deploy link in README.
+services:
+  - type: web
+    name: mental-health-risk-dashboard
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /_stcore/health
+    autoDeploy: true
+    envVars:
+      - key: BACKEND_HOST
+        value: 127.0.0.1
+      - key: BACKEND_PORT
+        value: "8000"
+      - key: BACKEND_URL
+        value: http://127.0.0.1:8000

@@ -29,3 +29,8 @@ __MACOSX/
 # Editor / local settings
 .vscode/
 .claude/
+# deployment runtime
+logs_backend.log
+logs_streamlit.log
+tunnel.log
+deploy/cloudflared

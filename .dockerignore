@@ -1,0 +1,27 @@
+# Virtual environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Git and editors
+.git/
+.github/
+.vscode/
+.claude/
+
+# Notebooks are for training, not runtime
+*.ipynb
+
+# Local runtime artifacts
+logs_backend.log
+logs_streamlit.log
+tunnel.log
+deploy/cloudflared
+deploy/start.log
+
+# Docs that are not needed in the image
+README.md

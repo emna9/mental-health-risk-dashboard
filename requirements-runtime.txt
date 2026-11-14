@@ -1,0 +1,14 @@
+# Runtime dependencies for the deployed dashboard and API.
+# xgboost, pytest, and notebook tooling live in requirements.txt for training only;
+# the app never imports xgboost, so the image stays small and CUDA-free.
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+imbalanced-learn>=0.14
+joblib>=1.3
+streamlit>=1.44
+plotly>=5.24
+fastapi>=0.115
+uvicorn[standard]>=0.30
+httpx>=0.27
+requests>=2.32

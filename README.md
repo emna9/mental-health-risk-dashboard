@@ -70,6 +70,63 @@ python -m streamlit run streamlit_app.py
 
 Open the dashboard at **http://localhost:8501**. API documentation is available at **http://localhost:8000/docs**. Both processes must remain running. The frontend connects to `http://localhost:8000` by default; set `BACKEND_URL` in its terminal to use a different backend address.
 
+## Deployment
+
+The Docker image runs the FastAPI backend and the Streamlit dashboard in one container. The backend listens on loopback and the dashboard is the only exposed port, so a single public URL is enough. The image installs `requirements-runtime.txt`; XGBoost and the notebook tooling in `requirements.txt` are only needed for training.
+
+### Docker (any host)
+
+```bash
+docker build -t mental-health-risk-dashboard .
+docker run --rm -p 8501:8501 mental-health-risk-dashboard
+```
+
+Or with compose:
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:8501**. The container health check hits `/_stcore/health`.
+
+### Render (one-click blueprint)
+
+[`render.yaml`](render.yaml) deploys the image as a free web service with the health check already configured:
+
+1. Push this repository to GitHub.
+2. In Render, choose **New > Blueprint** and select the repository. Render reads `render.yaml`.
+3. Wait for the first build (several minutes: scikit-learn and XGBoost wheels) and open the service URL.
+
+The free instance has 512 MB of RAM. Loading the 39 MB model artifact alongside pandas and scikit-learn may exceed that limit under load; upgrade the instance type if the service restarts.
+
+### Other container hosts
+
+The same `Dockerfile` works on Railway, Fly.io, Koyeb, or a VPS. Requirements:
+
+- Expose the container port (`PORT`, default `8501`).
+- Keep `BACKEND_URL` pointed at the backend (`http://127.0.0.1:8000`).
+- Point the platform health check at `/_stcore/health`.
+
+### Temporary public URL from a local machine
+
+`deploy/start.sh` runs both processes locally and opens a Cloudflare quick tunnel:
+
+```bash
+bash deploy/start.sh    # prints PUBLIC URL
+bash deploy/stop.sh     # stops everything
+```
+
+Quick-tunnel URLs are ephemeral: they change on every restart and stop working when the machine sleeps or the process exits. Use a container host for a stable URL.
+
+### Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `BACKEND_URL` | `http://localhost:8000` | Backend address used by the dashboard |
+| `BACKEND_HOST` / `BACKEND_PORT` | `127.0.0.1` / `8000` | Backend bind address inside the container |
+| `PORT` | `8501` | Dashboard port (set automatically by most platforms) |
+| `ALLOWED_ORIGINS` | `http://localhost:8501,http://127.0.0.1:8501` | Comma-separated CORS origins for the API |
+
 ## Modeling
 
 The notebooks cover data preparation, HistGradientBoosting, XGBoost, Balanced Random Forest, and model comparison. The dashboard reads saved benchmark results and uses `models/balanced_rf_artifact.joblib` for predictions. Prior diagnosis and treatment-related columns are excluded from prediction inputs to reduce target leakage.
