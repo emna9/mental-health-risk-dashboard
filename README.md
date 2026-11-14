@@ -1,6 +1,7 @@
 # Mental Health Risk Insights Dashboard
 
 **Live demo:** https://dashboard-isg3.onrender.com
+**API docs:** https://dashboard-api-zkvb.onrender.com/docs
 
 An interactive Streamlit dashboard with a FastAPI backend for exploring mental health patterns, comparing machine learning models, and trying predictions with a tuned Balanced Random Forest. Includes demographic analysis, lifestyle and support indicators, model comparisons, and a filterable data explorer.
 
