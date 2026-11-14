@@ -20,7 +20,7 @@ allowed_origins = [
 
 
 def _keep_warm_loop(public_url: str, interval_seconds: int) -> None:
-    health_url = f"{public_url.rstrip('/')}/api/v1/health"
+    health_url = f"{public_url.rstrip('/')}/api/v1/health?source=keepwarm"
     while True:
         time.sleep(interval_seconds)
         try:
@@ -42,6 +42,7 @@ def _start_keep_warm() -> None:
     if not enabled or not public_url:
         return
     interval = max(300, int(os.environ.get("KEEP_WARM_INTERVAL", "600")))
+    logger.setLevel(logging.INFO)
     threading.Thread(
         target=_keep_warm_loop,
         args=(public_url, interval),
