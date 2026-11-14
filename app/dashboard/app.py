@@ -644,11 +644,14 @@ def main() -> None:
     try:
         check_health()
     except BackendUnavailableError as exc:
-        st.error(
-            f"**Backend unreachable** — {exc}\n\n"
-            "Start the FastAPI server first:\n"
-            "```\nuvicorn app.backend.main:app --reload\n```"
+        st.warning(
+            f"**The analytics API is still waking up.** {exc}\n\n"
+            "Free-tier hosting pauses the API when idle, so the first visit can take up to a minute. "
+            "Requests retry automatically; use the button below to try again immediately."
         )
+        if st.button("Try again now"):
+            st.cache_data.clear()
+            st.rerun()
         st.stop()
 
     datasets = load_datasets()

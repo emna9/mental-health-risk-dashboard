@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 import pandas as pd
 import requests
@@ -13,42 +14,45 @@ if not _raw_base_url.startswith(("http://", "https://")):
 _BASE_URL = _raw_base_url
 _API = f"{_BASE_URL}/api/v1"
 _TIMEOUT = int(os.environ.get("BACKEND_TIMEOUT", "90"))
+_ATTEMPTS = max(1, int(os.environ.get("BACKEND_ATTEMPTS", "8")))
+_RETRYABLE_STATUS = {502, 503, 504}
+_BACKOFF_SECONDS = (2, 4, 8, 12, 20)
 
 
 class BackendUnavailableError(Exception):
     pass
 
 
-def _get(path: str, params: dict | None = None) -> dict:
-    try:
-        resp = requests.get(f"{_API}{path}", params=params, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.exceptions.ConnectionError:
-        raise BackendUnavailableError(
-            f"Cannot reach backend at {_BASE_URL}. Is `uvicorn app.backend.main:app --reload` running?"
-        )
-    except requests.exceptions.Timeout:
-        raise BackendUnavailableError(f"Backend timed out after {_TIMEOUT}s.")
-    except requests.exceptions.HTTPError as exc:
-        raise BackendUnavailableError(
-            f"Backend HTTP {exc.response.status_code}: {exc.response.text[:200]}"
-        )
+def _request(method: str, path: str, *, params: dict | None = None, body: dict | None = None) -> dict:
+    """Call the API, retrying through free-tier cold starts (502/503/504)."""
+    last_error = "no response"
+    for attempt in range(_ATTEMPTS):
+        try:
+            resp = requests.request(
+                method,
+                f"{_API}{path}",
+                params=params,
+                json=body,
+                timeout=(10, _TIMEOUT),
+            )
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+            last_error = type(exc).__name__
+        else:
+            if resp.status_code in _RETRYABLE_STATUS:
+                last_error = f"HTTP {resp.status_code}"
+            else:
+                if resp.status_code >= 400:
+                    raise BackendUnavailableError(
+                        f"Backend at {_BASE_URL} returned HTTP {resp.status_code}."
+                    )
+                return resp.json()
 
+        if attempt < _ATTEMPTS - 1:
+            time.sleep(_BACKOFF_SECONDS[min(attempt, len(_BACKOFF_SECONDS) - 1)])
 
-def _post(path: str, body: dict) -> dict:
-    try:
-        resp = requests.post(f"{_API}{path}", json=body, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.exceptions.ConnectionError:
-        raise BackendUnavailableError(f"Cannot reach backend at {_BASE_URL}.")
-    except requests.exceptions.Timeout:
-        raise BackendUnavailableError(f"Backend POST timed out after {_TIMEOUT}s.")
-    except requests.exceptions.HTTPError as exc:
-        raise BackendUnavailableError(
-            f"Backend HTTP {exc.response.status_code}: {exc.response.text[:200]}"
-        )
+    raise BackendUnavailableError(
+        f"Backend at {_BASE_URL} is still starting after {_ATTEMPTS} attempts ({last_error})."
+    )
 
 
 def _filter_params(fs) -> dict:
@@ -71,29 +75,29 @@ def _filter_params(fs) -> dict:
 
 
 def check_health() -> dict:
-    return _get("/health")
+    return _request("GET", "/health")
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_summary(filter_state) -> dict:
-    return _get("/analytics/summary", _filter_params(filter_state))
+    return _request("GET", "/analytics/summary", params=_filter_params(filter_state))
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_demographics(filter_state) -> dict[str, pd.DataFrame]:
-    data = _get("/analytics/demographics", _filter_params(filter_state))
+    data = _request("GET", "/analytics/demographics", params=_filter_params(filter_state))
     return {k: pd.DataFrame(data[k]) for k in ("age", "gender", "country", "employment", "education")}
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_factors(filter_state) -> dict[str, pd.DataFrame]:
-    data = _get("/analytics/factors", _filter_params(filter_state))
+    data = _request("GET", "/analytics/factors", params=_filter_params(filter_state))
     return {k: pd.DataFrame(data[k]) for k in ("factor_gaps", "symptom_summary", "stress_support", "feature_importance")}
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_support_patterns(filter_state) -> dict[str, pd.DataFrame]:
-    data = _get("/analytics/support", _filter_params(filter_state))
+    data = _request("GET", "/analytics/support", params=_filter_params(filter_state))
     return {
         "support_patterns": pd.DataFrame(data["support_patterns"]),
         "proxy_shares": pd.DataFrame(data["proxy_shares"]),
@@ -102,9 +106,9 @@ def fetch_support_patterns(filter_state) -> dict[str, pd.DataFrame]:
 
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_model_comparison() -> tuple[pd.DataFrame, str]:
-    data = _get("/models/compare")
+    data = _request("GET", "/models/compare")
     return pd.DataFrame(data["models"]), data["ranking_rule"]
 
 
 def call_predict(field_values: dict) -> dict:
-    return _post("/predict", field_values)
+    return _request("POST", "/predict", body=field_values)

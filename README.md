@@ -132,6 +132,7 @@ Quick-tunnel URLs are ephemeral: they change on every restart and stop working w
 | `BACKEND_URL` | `http://localhost:8000` | Backend address used by the dashboard (URL or bare hostname) |
 | `BACKEND_HOST` / `BACKEND_PORT` | `127.0.0.1` / `8000` | Backend bind address in `full` mode |
 | `BACKEND_TIMEOUT` | `90` | Seconds to wait for the API, including cold starts |
+| `BACKEND_ATTEMPTS` | `8` | Retries while the API wakes up (502/503/504 and timeouts) |
 | `PORT` | `8501` | Public port (set automatically by most platforms) |
 | `ALLOWED_ORIGINS` | `http://localhost:8501,http://127.0.0.1:8501` | Comma-separated CORS origins for the API |
 
