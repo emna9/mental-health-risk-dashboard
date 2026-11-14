@@ -113,6 +113,18 @@ The same `Dockerfile` works on Railway, Fly.io, Koyeb, or a VPS. Set `APP_MODE` 
 - For `ui`, set `BACKEND_URL` to the API service address.
 - Point the platform health check at `/_stcore/health` (UI) or `/api/v1/health` (API).
 
+### Keeping the free API warm
+
+`.github/workflows/keep-warm.yml` pings the API every 5 minutes so Render does not spin it down and the dashboard avoids 502 errors during cold starts. It runs on GitHub's scheduler, so no extra account is needed.
+
+Free Render workspaces receive **750 instance hours per month, shared by all free services**. Keeping the API awake around the clock consumes roughly 720-744 of them, and the dashboard's own wake time counts too. If the total runs out, Render suspends every free service until the next month. To leave headroom, narrow the cron to your active hours, for example:
+
+```yaml
+- cron: "*/5 6-22 * * *"   # 06:00-22:59 UTC only
+```
+
+GitHub disables scheduled workflows after 60 days without repository activity; re-enable the workflow from the Actions tab if needed.
+
 ### Temporary public URL from a local machine
 
 `deploy/start.sh` runs both processes locally and opens a Cloudflare quick tunnel:
